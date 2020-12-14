@@ -1,0 +1,6 @@
+[submodule "Dependencies/ogre-next"]
+	path = Dependencies/ogre-next
+	url = https://github.com/OGRECave/ogre-next
+[submodule "Dependencies/ogre-next-deps"]
+	path = Dependencies/ogre-next-deps
+	url = https://github.com/OGRECave/ogre-next-deps
