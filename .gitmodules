@@ -4,3 +4,6 @@
 [submodule "Dependencies/ogre-next-deps"]
 	path = Dependencies/ogre-next-deps
 	url = https://github.com/OGRECave/ogre-next-deps
+[submodule "Dependencies/blender2ogre"]
+	path = Dependencies/blender2ogre
+	url = https://github.com/OGRECave/blender2ogre
