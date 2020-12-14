@@ -304,6 +304,8 @@ Ogre::SceneNode* ogreCreateLight()
 	return newLightNode;
 }
 
+// This is an example of the high-level material system. Copied largely from PBS Materials sample
+// (and modified). Read https://ogrecave.github.io/ogre-next/api/2.2/hlms.html !
 void ogreCreatePbsSpheres(Ogre::Root* root, Ogre::SceneManager* sceneManager)
 {
 	int numSpheres = 0;
@@ -361,6 +363,9 @@ void ogreCreatePbsSpheres(Ogre::Root* root, Ogre::SceneManager* sceneManager)
 				    meshNameV2, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME,
 				    Ogre::SCENE_DYNAMIC);
 			}
+
+			// Example using a .material (must be hlms) instead of using manual C++:
+			// item->setDatablock("MyMaterial");
 
 			item->setDatablock(datablock);
 			item->setVisibilityFlags(0x000000002);
