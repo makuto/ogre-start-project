@@ -1,0 +1,21 @@
+#+TITLE: Ogre Start Project
+
+This is for Ogre v2, aka. [[https://github.com/OGRECave/ogre-next][Ogre-next]].
+
+See [[https://macoy.me/blog/programming/Ogre2Setup][this article]] for a step-by-step explanation of this setup.
+
+* Cloning
+This repository includes Ogre and other dependencies as submodules. To clone properly:
+
+#+BEGIN_SRC sh
+git clone --recurse-submodules https://github.com/makuto/ogre-start-project
+
+# Or, if you've already cloned without --recurse-submodules:
+git submodule update --init --recursive
+#+END_SRC
+
+You may also need to do this:
+#+BEGIN_SRC sh
+cd Dependencies/ogre-next-deps
+git submodule update --init --recursive
+#+END_SRC
