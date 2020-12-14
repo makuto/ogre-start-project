@@ -27,10 +27,13 @@ static bool gGraphicsIntialized = false;
 static void registerHlms()
 {
 	Ogre::String resourcePath = "data/";
+
 	Ogre::ConfigFile config;
 	config.load((resourcePath + "resources2.cfg"));
+
 	Ogre::String rootHlmsFolder =
 	    (resourcePath + config.getSetting("DoNotUseAsResource", "Hlms", "Hlms"));
+
 	if (rootHlmsFolder.empty())
 	{
 		rootHlmsFolder = "./";
@@ -39,6 +42,7 @@ static void registerHlms()
 	{
 		rootHlmsFolder = (rootHlmsFolder + "/");
 	}
+
 	Ogre::HlmsUnlit* hlmsUnlit = nullptr;
 	Ogre::HlmsPbs* hlmsPbs = nullptr;
 	Ogre::String mainFolderPath;
@@ -47,6 +51,7 @@ static void registerHlms()
 	Ogre::StringVector::const_iterator libraryFolderPathEn;
 	Ogre::ArchiveManager& archiveManager = Ogre::ArchiveManager::getSingleton();
 
+	// Unlit
 	{
 		Ogre::HlmsUnlit::getDefaultPaths(mainFolderPath, libraryFoldersPaths);
 		Ogre::Archive* archiveUnlit =
@@ -65,6 +70,7 @@ static void registerHlms()
 		Ogre::Root::getSingleton().getHlmsManager()->registerHlms(hlmsUnlit);
 	}
 
+	// PBS (lit)
 	{
 		Ogre::HlmsPbs::getDefaultPaths(mainFolderPath, libraryFoldersPaths);
 		Ogre::Archive* archivePbs =
@@ -82,6 +88,7 @@ static void registerHlms()
 		hlmsPbs = OGRE_NEW Ogre::HlmsPbs(archivePbs, (&archivePbsLibraryFolders));
 		Ogre::Root::getSingleton().getHlmsManager()->registerHlms(hlmsPbs);
 	}
+
 	Ogre::RenderSystem* renderSystem = Ogre::Root::getSingletonPtr()->getRenderSystem();
 	if (renderSystem->getName() == "Direct3D11 Rendering Subsystem")
 	{
@@ -101,8 +108,10 @@ bool ogreInitializeInternal(bool useCurrentWindow)
 	const Ogre::String pluginsFolder = "./data/";
 	const Ogre::String writeAccessFolder = "./output/";
 	const char* pluginsFile = "plugins_d.cfg";
+
 	gOgreRoot = OGRE_NEW Ogre::Root((pluginsFolder + pluginsFile), (writeAccessFolder + "ogre.cfg"),
 	                                (writeAccessFolder + "Ogre.log"));
+
 	Ogre::RenderSystem* renderSystem =
 	    gOgreRoot->getRenderSystemByName("OpenGL 3+ Rendering Subsystem");
 	if (!(renderSystem))
@@ -114,7 +123,8 @@ bool ogreInitializeInternal(bool useCurrentWindow)
 	renderSystem->setConfigOption("Video Mode", "1920 x 1080");
 	renderSystem->setConfigOption("sRGB Gamma Conversion", "Yes");
 	gOgreRoot->setRenderSystem(renderSystem);
-	gOgreWindow = gOgreRoot->initialise(!(useCurrentWindow), "GameLib");
+
+	gOgreWindow = gOgreRoot->initialise(!(useCurrentWindow), "OgreStartProject");
 	if (useCurrentWindow)
 	{
 		Ogre::NameValuePairList windowSettings;
@@ -122,24 +132,31 @@ bool ogreInitializeInternal(bool useCurrentWindow)
 		windowSettings["currentGLContext"] = Ogre::String("True");
 		int winWidth = 1920;
 		int winHeight = 1080;
-		gOgreWindow =
-		    gOgreRoot->createRenderWindow("GameLib", winWidth, winHeight, false, (&windowSettings));
+		gOgreWindow = gOgreRoot->createRenderWindow("OgreStartProject", winWidth, winHeight, false,
+		                                            (&windowSettings));
 	}
+
 	registerHlms();
+
 	const size_t numThreads = 1u;
 	gSceneManager = gOgreRoot->createSceneManager(Ogre::ST_GENERIC, numThreads, "SceneManager");
+
 	Ogre::Camera* camera = gSceneManager->createCamera("Main Camera");
-	camera->setPosition(Ogre::Vector3(0, 5, 15));
-	camera->lookAt(Ogre::Vector3(0, 0, 0));
-	camera->setNearClipDistance(0.2f);
-	camera->setFarClipDistance(1000.0f);
-	camera->setAutoAspectRatio(true);
+	{
+		camera->setPosition(Ogre::Vector3(0, 5, 15));
+		camera->lookAt(Ogre::Vector3(0, 0, 0));
+		camera->setNearClipDistance(0.2f);
+		camera->setFarClipDistance(1000.0f);
+		camera->setAutoAspectRatio(true);
+	}
+
 	Ogre::CompositorManager2* compositorManager = gOgreRoot->getCompositorManager2();
 	const Ogre::String workspaceName = "Main Workspace";
 	const Ogre::ColourValue backgroundColour(0.0302f, 0.03f, 0.03f);
 	compositorManager->createBasicWorkspaceDef(workspaceName, backgroundColour, Ogre::IdString());
 	compositorManager->addWorkspace(gSceneManager, gOgreWindow->getTexture(), camera, workspaceName,
 	                                true);
+
 	Ogre::ResourceGroupManager& resourceGroupManager = Ogre::ResourceGroupManager::getSingleton();
 	resourceGroupManager.addResourceLocation("data/Models", "FileSystem", "Models");
 	resourceGroupManager.addResourceLocation("data/Materials/Textures", "FileSystem", "Textures");
@@ -150,6 +167,7 @@ bool ogreInitializeInternal(bool useCurrentWindow)
 		resourceGroupManager.initialiseResourceGroup("Materials", true);
 		resourceGroupManager.loadResourceGroup("Materials");
 	}
+
 	gGraphicsIntialized = true;
 	return true;
 }
@@ -265,12 +283,16 @@ Ogre::SceneNode* ogreCreateLight()
 int main()
 {
 	ogreInitialize();
+
 	Ogre::Item* monkeyMesh = ogreLoadMesh("Suzanne.mesh");
 	Ogre::SceneNode* monkeyNode = ogreNodeFromItem(monkeyMesh);
+	Ogre::SceneNode* lightNode = ogreCreateLight();
+
 	const char* exitReason = nullptr;
 	float x = 0.f;
 	float y = 0.f;
 	float z = 0.f;
+
 	while (true)
 	{
 		monkeyNode->setPosition(x, y, z);
@@ -281,6 +303,7 @@ int main()
 			break;
 		}
 	}
+
 	ogreShutdown();
 	if (exitReason)
 	{

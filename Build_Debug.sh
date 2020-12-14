@@ -3,7 +3,7 @@
 # Note that this will rebuild and re-link every time. You should use a build system to save time!
 
 # Compile
-clang++ -c main.cpp -g -IDependencies/ogre-next/OgreMain/include \
+clang++ -c main.cpp -g -D_DEBUG -IDependencies/ogre-next/OgreMain/include \
 		-IDependencies/ogre-next/Components/Hlms/Common/include \
 		-IDependencies/ogre-next/Components/Hlms/Pbs/include \
 		-IDependencies/ogre-next/Components/Hlms/Unlit/include \
