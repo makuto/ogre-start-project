@@ -6,6 +6,8 @@
 #include "OgreConfigFile.h"
 #include "OgreHlmsManager.h"
 #include "OgreHlmsPbs.h"
+#include "OgreHlmsPbsDatablock.h"
+#include "OgreHlmsSamplerblock.h"
 #include "OgreHlmsUnlit.h"
 #include "OgreItem.h"
 #include "OgreMesh.h"
@@ -13,6 +15,9 @@
 #include "OgreMeshManager.h"
 #include "OgreMeshManager2.h"
 #include "OgreRoot.h"
+#include "OgreSceneManager.h"
+#include "OgreTextureFilters.h"
+#include "OgreTextureGpuManager.h"
 #include "OgreWindow.h"
 #include "OgreWindowEventUtilities.h"
 
@@ -23,6 +28,20 @@ static Ogre::SceneManager* gSceneManager = nullptr;
 static Ogre::Window* gOgreWindow = nullptr;
 
 static bool gGraphicsIntialized = false;
+
+static bool g_ogre_window_should_quit = false;
+
+class MyWindowEventListener : public Ogre::WindowEventListener
+{
+public:
+	virtual void windowClosed(Ogre::Window* window)
+	{
+		printf("Window closed!\n");
+		g_ogre_window_should_quit = true;
+	}
+};
+
+MyWindowEventListener g_myWindowEventListener;
 
 static void registerHlms()
 {
@@ -112,6 +131,10 @@ bool ogreInitializeInternal(bool useCurrentWindow)
 	gOgreRoot = OGRE_NEW Ogre::Root((pluginsFolder + pluginsFile), (writeAccessFolder + "ogre.cfg"),
 	                                (writeAccessFolder + "Ogre.log"));
 
+	// This allows the user to configure the graphics. It's damn annoying during dev though
+	// if (!root->showConfigDialog())
+		// return false;
+
 	Ogre::RenderSystem* renderSystem =
 	    gOgreRoot->getRenderSystemByName("OpenGL 3+ Rendering Subsystem");
 	if (!(renderSystem))
@@ -168,12 +191,18 @@ bool ogreInitializeInternal(bool useCurrentWindow)
 		resourceGroupManager.loadResourceGroup("Materials");
 	}
 
+	if (!useCurrentWindow)
+	{
+		Ogre::WindowEventUtilities::addWindowEventListener(gOgreWindow, &g_myWindowEventListener);
+	}
+
 	gGraphicsIntialized = true;
 	return true;
 }
 
-void ogreShutdownInternal()
+void ogreShutdown()
 {
+	Ogre::WindowEventUtilities::removeWindowEventListener(gOgreWindow, &g_myWindowEventListener);
 	OGRE_DELETE(gOgreRoot);
 	gOgreRoot = nullptr;
 }
@@ -196,11 +225,6 @@ bool ogreInitialize()
 bool ogreInitializeSdl()
 {
 	return ogreInitializeInternal(true);
-}
-
-void ogreShutdown()
-{
-	ogreShutdownInternal();
 }
 
 bool ogreRenderFrame()
@@ -280,6 +304,81 @@ Ogre::SceneNode* ogreCreateLight()
 	return newLightNode;
 }
 
+void ogreCreatePbsSpheres(Ogre::Root* root, Ogre::SceneManager* sceneManager)
+{
+	int numSpheres = 0;
+	Ogre::HlmsManager* hlmsManager = root->getHlmsManager();
+
+	assert(dynamic_cast<Ogre::HlmsPbs*>(hlmsManager->getHlms(Ogre::HLMS_PBS)));
+
+	Ogre::HlmsPbs* hlmsPbs = static_cast<Ogre::HlmsPbs*>(hlmsManager->getHlms(Ogre::HLMS_PBS));
+
+	const int numX = 8;
+	const int numZ = 8;
+
+	const float armsLength = 1.f;
+	const float startX = (numX - 1) / 2.0f;
+	const float startZ = (numZ - 1) / 2.0f;
+
+	Ogre::TextureGpuManager* textureMgr = root->getRenderSystem()->getTextureGpuManager();
+	Ogre::SceneNode* rootSceneNode = sceneManager->getRootSceneNode();
+
+	// const Ogre::String meshNameV2 = "Sphere.mesh";
+	const Ogre::String meshNameV2 = "Suzanne.mesh";
+	{
+		Ogre::MeshPtr v2Mesh = Ogre::MeshManager::getSingleton().load(
+		    meshNameV2, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME);
+	}
+
+	for (int x = 0; x < numX; ++x)
+	{
+		for (int z = 0; z < numZ; ++z)
+		{
+			Ogre::String datablockName = "Test" + Ogre::StringConverter::toString(numSpheres++);
+			Ogre::HlmsPbsDatablock* datablock = static_cast<Ogre::HlmsPbsDatablock*>(
+			    hlmsPbs->createDatablock(datablockName, datablockName, Ogre::HlmsMacroblock(),
+			                             Ogre::HlmsBlendblock(), Ogre::HlmsParamVec()));
+
+			// Reflection texture. Uncomment once you've copied SaintPetersBasilica.dds to Materials/Textures
+			// {
+			// 	Ogre::TextureGpu* texture = textureMgr->createOrRetrieveTexture(
+			// 	    "SaintPetersBasilica.dds", Ogre::GpuPageOutStrategy::Discard,
+			// 	    Ogre::TextureFlags::PrefersLoadingFromFileAsSRGB, Ogre::TextureTypes::TypeCube,
+			// 	    Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME,
+			// 	    Ogre::TextureFilter::TypeGenerateDefaultMipmaps);
+
+			// 	datablock->setTexture(Ogre::PBSM_REFLECTION, texture);
+			// }
+
+			datablock->setDiffuse(Ogre::Vector3(0.0f, 1.0f, 0.0f));
+
+			datablock->setRoughness(std::max(0.02f, x / std::max(1.0f, (float)(numX - 1))));
+			datablock->setFresnel(Ogre::Vector3(z / std::max(1.0f, (float)(numZ - 1))), false);
+
+			Ogre::Item* item = nullptr;
+			{
+				item = sceneManager->createItem(
+				    meshNameV2, Ogre::ResourceGroupManager::AUTODETECT_RESOURCE_GROUP_NAME,
+				    Ogre::SCENE_DYNAMIC);
+			}
+
+			item->setDatablock(datablock);
+			item->setVisibilityFlags(0x000000002);
+
+			Ogre::SceneNode* sceneNode = ((Ogre::SceneNode*)rootSceneNode->createChild());
+			if (!sceneNode)
+				return;
+			sceneNode->setPosition(
+			    Ogre::Vector3(armsLength * x - startX, -3.0f, armsLength * z - startZ));
+			sceneNode->attachObject(item);
+		}
+	}
+}
+
+//
+// main!
+//
+
 int main()
 {
 	ogreInitialize();
@@ -287,27 +386,27 @@ int main()
 	Ogre::Item* monkeyMesh = ogreLoadMesh("Suzanne.mesh");
 	Ogre::SceneNode* monkeyNode = ogreNodeFromItem(monkeyMesh);
 	Ogre::SceneNode* lightNode = ogreCreateLight();
+	ogreCreatePbsSpheres(gOgreRoot, gSceneManager);
 
-	const char* exitReason = nullptr;
 	float x = 0.f;
 	float y = 0.f;
 	float z = 0.f;
 
 	while (true)
 	{
+		Ogre::WindowEventUtilities::messagePump();
+		if (g_ogre_window_should_quit)
+			break;
+
 		monkeyNode->setPosition(x, y, z);
 		x = (x + 0.01f);
 		if (!(ogreRenderFrame()))
 		{
-			exitReason = "Failed to render frame";
+			// Something bad happened
 			break;
 		}
 	}
 
 	ogreShutdown();
-	if (exitReason)
-	{
-		printf("Exit reason: %s\n", exitReason);
-	}
 	return 0;
 }
